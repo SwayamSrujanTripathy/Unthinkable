@@ -1,60 +1,54 @@
 import streamlit as st
 import requests
+import os
 
-st.set_page_config(page_title="DocQuery RAG", layout="wide")
+# Updated to use localhost for local development
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
-st.title("📄 DocQuery RAG: Ask Questions From Your Documents")
-st.write("Upload your documents and get answers powered by Gemini and Pinecone.")
+st.set_page_config(layout="wide", page_title="Document RAG System")
 
-# API endpoint
-API_URL = "http://backend:8000"
+st.title("📄 Retrieval-Augmented Generation (RAG) System")
+st.markdown("Upload your documents (PDF or TXT) and ask questions about them.")
 
 with st.sidebar:
     st.header("Upload Documents")
     uploaded_files = st.file_uploader(
-        "Upload your Text or PDF files",
+        "Choose PDF or TXT files",
         accept_multiple_files=True,
         type=['pdf', 'txt']
     )
 
-    if st.button("Process Documents"):
-        if uploaded_files:
+    if st.button("Process Documents") and uploaded_files:
+        with st.spinner("Processing documents... This may take a moment."):
             files = [("files", (file.name, file.getvalue(), file.type)) for file in uploaded_files]
-            
-            with st.spinner("Processing documents... This may take a moment."):
-                try:
-                    response = requests.post(f"{API_URL}/upload-documents/", files=files)
-                    if response.status_code == 201:
-                        st.success("Documents processed and indexed successfully!")
-                    else:
-                        st.error(f"Error: {response.text}")
-                except requests.exceptions.RequestException as e:
-                    st.error(f"Connection error: {e}")
-        else:
-            st.warning("Please upload at least one document.")
+            try:
+                response = requests.post(f"{BACKEND_URL}/upload-documents/", files=files)
+                if response.status_code == 200:
+                    st.success("Documents processed and indexed successfully!")
+                else:
+                    st.error(f"Error processing documents: {response.text}")
+            except requests.exceptions.ConnectionError as e:
+                st.error(f"Connection error: {e}")
+                st.info("Please ensure the backend service is running and accessible.")
 
 st.header("Ask a Question")
-user_question = st.text_input("Enter your question here:")
+user_input = st.text_input("Enter your question based on the uploaded documents:")
 
-if st.button("Get Answer"):
-    if user_question:
-        with st.spinner("Searching for an answer..."):
-            try:
-                payload = {"query": user_question}
-                response = requests.post(f"{API_URL}/query/", json=payload)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    st.subheader("Answer:")
-                    st.write(data["answer"])
-                    
-                    with st.expander("Show Retrieved Context"):
-                        for i, context_chunk in enumerate(data["context"]):
-                            st.write(f"**Chunk {i+1}:**")
-                            st.write(context_chunk)
-                else:
-                    st.error(f"Error fetching answer: {response.text}")
-            except requests.exceptions.RequestException as e:
-                st.error(f"Connection error: {e}")
-    else:
-        st.warning("Please enter a question.")
+if user_input:
+    with st.spinner("Searching for an answer..."):
+        try:
+            # FIX: The JSON payload key must match the Pydantic model in the backend.
+            # Changed 'query' to 'text'.
+            payload = {"text": user_input}
+            response = requests.post(f"{BACKEND_URL}/query/", json=payload)
+
+            if response.status_code == 200:
+                answer = response.json().get("answer")
+                st.subheader("Answer:")
+                st.write(answer)
+            else:
+                st.error(f"Failed to get an answer: {response.text}")
+        except requests.exceptions.ConnectionError as e:
+            st.error(f"Connection error: {e}")
+            st.info("Please ensure the backend service is running and accessible.")
+

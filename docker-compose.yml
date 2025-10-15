@@ -2,24 +2,25 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: ./backend/Dockerfile
     ports:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
     env_file:
       - ./backend/app/core/.env
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # Increase shared memory size for the container
+    # This helps prevent memory-related errors during package installation.
+    shm_size: '2gb'
 
   frontend:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
+      dockerfile: ./frontend/Dockerfile
     ports:
       - "8501:8501"
-    depends_on:
-      - backend
     volumes:
       - ./frontend:/app
-    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    depends_on:
+      - backend
 
