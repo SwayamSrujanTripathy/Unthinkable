@@ -1,0 +1,22 @@
+# FastAPI and Server
+fastapi
+uvicorn[standard]
+
+# Streamlit Frontend
+streamlit
+requests
+
+# Language Model and Embeddings
+google-generativeai
+sentence-transformers
+langchain
+
+# Vector Database
+pinecone-client
+
+# PDF Processing
+PyMuPDF
+
+# Configuration
+python-dotenv
+pydantic-settings
